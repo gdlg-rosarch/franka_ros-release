@@ -11,19 +11,14 @@
 #include <hardware_interface/joint_command_interface.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
-#include <xmlrpcpp/XmlRpcValue.h>
 
 namespace franka_example_controllers {
 
-CartesianVelocityExampleController::CartesianVelocityExampleController()
-    : velocity_cartesian_interface_(nullptr),
-      velocity_cartesian_handle_(nullptr),
-      elapsed_time_(0.0) {}
-
 bool CartesianVelocityExampleController::init(hardware_interface::RobotHW* robot_hardware,
                                               ros::NodeHandle& root_node_handle,
-                                              ros::NodeHandle& /*controller_node_handle*/) {
-  if (!root_node_handle.getParam("arm_id", arm_id_)) {
+                                              ros::NodeHandle& /* controller_node_handle */) {
+  std::string arm_id;
+  if (!root_node_handle.getParam("arm_id", arm_id)) {
     ROS_ERROR("CartesianVelocityExampleController: Could not get parameter arm_id");
     return false;
   }
@@ -38,18 +33,46 @@ bool CartesianVelocityExampleController::init(hardware_interface::RobotHW* robot
   }
   try {
     velocity_cartesian_handle_.reset(new franka_hw::FrankaCartesianVelocityHandle(
-        velocity_cartesian_interface_->getHandle(arm_id_ + "_robot")));
+        velocity_cartesian_interface_->getHandle(arm_id + "_robot")));
   } catch (const hardware_interface::HardwareInterfaceException& e) {
     ROS_ERROR_STREAM(
-        "CartesianVelocityExampleController: Exception getting cartesian handle: " << e.what());
+        "CartesianVelocityExampleController: Exception getting Cartesian handle: " << e.what());
     return false;
   }
 
-  elapsed_time_ = ros::Duration(0.0);
+  auto state_interface = robot_hardware->get<franka_hw::FrankaStateInterface>();
+  if (state_interface == nullptr) {
+    ROS_ERROR("CartesianVelocityExampleController: Could not get state interface from hardware");
+    return false;
+  }
+
+  try {
+    auto state_handle = state_interface->getHandle(arm_id + "_robot");
+
+    std::array<double, 7> q_start = {{0, -M_PI_4, 0, -3 * M_PI_4, 0, M_PI_2, M_PI_4}};
+    for (size_t i = 0; i < q_start.size(); i++) {
+      if (std::abs(state_handle.getRobotState().q_d[i] - q_start[i]) > 0.1) {
+        ROS_ERROR_STREAM(
+            "CartesianVelocityExampleController: Robot is not in the expected starting position "
+            "for running this example. Run `roslaunch panda_moveit_config move_to_start.launch "
+            "robot_ip:=<robot-ip> load_gripper:=<has-attached-gripper>` first.");
+        return false;
+      }
+    }
+  } catch (const hardware_interface::HardwareInterfaceException& e) {
+    ROS_ERROR_STREAM(
+        "CartesianVelocityExampleController: Exception getting state handle: " << e.what());
+    return false;
+  }
+
   return true;
 }
 
-void CartesianVelocityExampleController::update(const ros::Time& /*time*/,
+void CartesianVelocityExampleController::starting(const ros::Time& /* time */) {
+  elapsed_time_ = ros::Duration(0.0);
+}
+
+void CartesianVelocityExampleController::update(const ros::Time& /* time */,
                                                 const ros::Duration& period) {
   elapsed_time_ += period;
 
