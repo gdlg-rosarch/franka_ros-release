@@ -6,13 +6,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(catkin REQUIRED COMPONENTS
   controller_interface
-  franka_description
   hardware_interface
   joint_limits_interface
   roscpp
 )
 
-find_package(Franka REQUIRED)
+find_package(Franka 0.2.0 REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
