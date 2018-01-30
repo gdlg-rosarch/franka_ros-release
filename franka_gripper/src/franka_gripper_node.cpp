@@ -11,7 +11,6 @@
 #include <ros/rate.h>
 #include <ros/spinner.h>
 #include <sensor_msgs/JointState.h>
-#include <xmlrpcpp/XmlRpc.h>
 
 #include <franka/gripper_state.h>
 #include <franka_gripper/franka_gripper.h>
@@ -39,22 +38,22 @@ void handleErrors(actionlib::SimpleActionServer<T_action>* server,
 using actionlib::SimpleActionServer;
 using control_msgs::GripperCommandAction;
 using franka_gripper::GraspAction;
-using franka_gripper::MoveAction;
-using franka_gripper::HomingAction;
-using franka_gripper::StopAction;
 using franka_gripper::GraspGoalConstPtr;
-using franka_gripper::MoveGoalConstPtr;
-using franka_gripper::StopGoalConstPtr;
+using franka_gripper::GraspResult;
+using franka_gripper::HomingAction;
 using franka_gripper::HomingGoalConstPtr;
 using franka_gripper::HomingResult;
-using franka_gripper::GraspResult;
+using franka_gripper::MoveAction;
+using franka_gripper::MoveGoalConstPtr;
 using franka_gripper::MoveResult;
+using franka_gripper::StopAction;
+using franka_gripper::StopGoalConstPtr;
 using franka_gripper::StopResult;
-using franka_gripper::homing;
-using franka_gripper::stop;
 using franka_gripper::grasp;
-using franka_gripper::move;
 using franka_gripper::gripperCommandExecuteCallback;
+using franka_gripper::homing;
+using franka_gripper::move;
+using franka_gripper::stop;
 using franka_gripper::updateGripperState;
 
 int main(int argc, char** argv) {
@@ -65,14 +64,10 @@ int main(int argc, char** argv) {
     ROS_ERROR("franka_gripper_node: Could not parse robot_ip parameter");
     return -1;
   }
-  double width_tolerance(0.01);
-  if (node_handle.getParam("width_tolerance", width_tolerance)) {
-    ROS_INFO_STREAM("franka_gripper_node: Found width_tolerance" << width_tolerance);
-  }
 
   double default_speed(0.1);
   if (node_handle.getParam("default_speed", default_speed)) {
-    ROS_INFO_STREAM("franka_gripper_node: Found default_speed" << default_speed);
+    ROS_INFO_STREAM("franka_gripper_node: Found default_speed " << default_speed);
   }
 
   franka::Gripper gripper(robot_ip);
@@ -125,27 +120,26 @@ int main(int argc, char** argv) {
                     << publish_rate);
   }
 
-  XmlRpc::XmlRpcValue params;
-  if (!node_handle.getParam("joint_names", params)) {
+  std::vector<std::string> joint_names;
+  if (!node_handle.getParam("joint_names", joint_names)) {
     ROS_ERROR("franka_gripper_node: Could not parse joint_names!");
     return -1;
   }
-  if (params.size() != 2) {
+  if (joint_names.size() != 2) {
     ROS_ERROR("franka_gripper_node: Got wrong number of joint_names!");
     return -1;
-  }
-  std::vector<std::string> joint_names(params.size());
-  for (int i = 0; i < params.size(); ++i) {
-    joint_names[i] = static_cast<std::string>(params[i]);
   }
 
   franka::GripperState gripper_state;
   std::mutex gripper_state_mutex;
   std::thread read_thread([&gripper_state, &gripper, &gripper_state_mutex]() {
     ros::Rate read_rate(10);
-    while (read_rate.sleep() && ros::ok()) {
-      std::lock_guard<std::mutex> lock(gripper_state_mutex);
-      updateGripperState(gripper, &gripper_state);
+    while (ros::ok()) {
+      {
+        std::lock_guard<std::mutex> _(gripper_state_mutex);
+        updateGripperState(gripper, &gripper_state);
+      }
+      read_rate.sleep();
     }
   });
 
