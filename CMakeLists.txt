@@ -9,7 +9,6 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib_msgs
   controller_interface
   controller_manager
-  franka_description
   franka_hw
   franka_msgs
   geometry_msgs
@@ -22,7 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_msgs
 )
 
-find_package(Franka REQUIRED)
+find_package(Franka 0.2.0 REQUIRED)
 
 add_service_files(FILES
   SetCartesianImpedance.srv
