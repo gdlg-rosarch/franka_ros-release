@@ -1,18 +1,23 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(franka_example_controllers)
 
+set(CMAKE_BUILD_TYPE Release)
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(catkin REQUIRED COMPONENTS
   controller_interface
-  franka_description
   franka_hw
   pluginlib
   realtime_tools
   roscpp
   message_generation
+  dynamic_reconfigure
 )
+
+find_package(Eigen3 REQUIRED)
+find_package(Franka 0.2.0 REQUIRED)
 
 add_message_files(FILES
   JointTorqueComparison.msg
@@ -20,13 +25,19 @@ add_message_files(FILES
 
 generate_messages()
 
+generate_dynamic_reconfigure_options(
+  cfg/compliance_param.cfg
+  cfg/desired_mass_param.cfg
+)
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES franka_example_controllers
-  CATKIN_DEPENDS controller_interface franka_description franka_hw pluginlib
+  CATKIN_DEPENDS controller_interface franka_hw pluginlib
+  DEPENDS Franka
 )
 
-include_directories(include ${catkin_INCLUDE_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS})
 
 add_library(franka_example_controllers
   src/cartesian_pose_example_controller.cpp
@@ -35,15 +46,22 @@ add_library(franka_example_controllers
   src/joint_velocity_example_controller.cpp
   src/model_example_controller.cpp
   src/joint_impedance_example_controller.cpp
+  src/cartesian_impedance_example_controller.cpp
+  src/force_example_controller.cpp
 )
 
 add_dependencies(franka_example_controllers
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
   ${PROJECT_NAME}_generate_messages_cpp
+  ${PROJECT_NAME}_gencpp
+  ${PROJECT_NAME}_gencfg
 )
 
-target_link_libraries(franka_example_controllers ${catkin_LIBRARIES})
+target_link_libraries(franka_example_controllers
+  ${catkin_LIBRARIES}
+  Franka::Franka
+)
 
 ## Installation
 install(TARGETS franka_example_controllers
