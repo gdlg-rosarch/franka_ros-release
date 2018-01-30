@@ -5,8 +5,11 @@ float64[7] q
 float64[7] q_d
 float64[7] dq
 float64[7] dq_d
+float64[7] theta
+float64[7] dtheta
 float64[7] tau_J
 float64[7] dtau_J
+float64[7] tau_J_d
 float64[6] K_F_ext_hat_K
 float64[2] elbow
 float64[2] elbow_d
@@ -14,9 +17,15 @@ float64[7] joint_collision
 float64[7] joint_contact
 float64[6] O_F_ext_hat_K
 float64[7] tau_ext_hat_filtered
+float64 m_ee
+float64[3] F_x_Cee
+float64[9] I_ee
 float64 m_load
 float64[3] F_x_Cload
 float64[9] I_load
+float64 m_total
+float64[3] F_x_Ctotal
+float64[9] I_total
 float64[16] O_T_EE
 float64[16] O_T_EE_d
 float64[16] F_T_EE
